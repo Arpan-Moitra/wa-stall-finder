@@ -25,7 +25,26 @@ It only diagnoses. It does not repair, re-encrypt, or talk to your phone.
   `--keep-decrypted` is the only way to get a decrypted copy, and it goes into `--out`.
 - The only thing written is the report directory (`--out`, mode `0700`, files `0600`).
 
-## Install
+## The easy way: the desktop app
+
+For someone who does not use a terminal there is a double-click app for Windows and
+Mac (Apple Silicon). It has one window: choose the backup file, type the key, click
+"Find the problem messages". It shows plain-language instructions for which messages to
+delete and how to find them, and saves the full report to a folder on the Desktop.
+
+Download the zip for your computer from the repository's Releases page. Each zip contains
+the app and `HOW TO USE.txt`, a step-by-step guide written for non-technical readers.
+
+The apps are not code-signed, so the first launch needs one extra step:
+
+- **Windows:** "Windows protected your PC" > More info > Run anyway.
+- **Mac:** System Settings > Privacy & Security > Open Anyway.
+
+The app is the same read-only code as the command-line tool. To build the apps, push a
+version tag (`git tag v0.1.0 && git push origin v0.1.0`) or run the "Build desktop apps"
+workflow by hand; see `.github/workflows/build-apps.yml`.
+
+## Install (command line)
 
 Python 3.11 or newer.
 
