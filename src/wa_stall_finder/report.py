@@ -23,12 +23,13 @@ BADGE = {"ok": "ok", "flagged": "FLAGGED", "skipped": "skipped", "error": "ERROR
 
 def prepare_out_dir(out: Path) -> None:
     out.mkdir(mode=0o700, parents=True, exist_ok=True)
-    os.chmod(out, 0o700)
+    os.chmod(out, 0o700)  # no effect on Windows, where the user profile's ACLs apply
 
 
 def _open_private(path: Path) -> TextIO:
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    os.fchmod(fd, 0o600)
+    if hasattr(os, "fchmod"):  # not available on Windows
+        os.fchmod(fd, 0o600)
     return os.fdopen(fd, "w", encoding="utf-8", newline="")
 
 

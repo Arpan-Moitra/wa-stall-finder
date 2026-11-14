@@ -1,0 +1,75 @@
+name: Build desktop apps
+
+# Builds the double-click apps for Windows and macOS.
+# Runs when a version tag (v1.2.3) is pushed, or by hand from the Actions tab.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed only to attach the apps to a release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: WhatsApp-Stall-Finder-Windows.zip
+          - os: macos-latest
+            asset: WhatsApp-Stall-Finder-Mac-AppleSilicon.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: python -m pip install ".[test,app]"
+      - name: Test
+        run: python -m pytest -q
+      - name: Build app
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then MODE=--onefile; else MODE=--onedir; fi
+          python -m PyInstaller --noconfirm --clean --windowed $MODE \
+            --name "WhatsApp Stall Finder" \
+            --collect-submodules wa_crypt_tools \
+            --collect-submodules javaobj \
+            packaging/app.py
+      - name: Check the built app starts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist/WhatsApp Stall Finder.exe" -ArgumentList "--self-test" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "self-test failed with exit code $($p.ExitCode)" }
+      - name: Check the built app starts (macOS)
+        if: runner.os == 'macOS'
+        run: '"dist/WhatsApp Stall Finder.app/Contents/MacOS/WhatsApp Stall Finder" --self-test'
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out, stage | Out-Null
+          Copy-Item "dist/WhatsApp Stall Finder.exe", "packaging/HOW TO USE.txt" stage
+          Compress-Archive -Path stage/* -DestinationPath "out/${{ matrix.asset }}"
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p out "stage/WhatsApp Stall Finder"
+          cp -R "dist/WhatsApp Stall Finder.app" "packaging/HOW TO USE.txt" "stage/WhatsApp Stall Finder/"
+          ditto -c -k --keepParent "stage/WhatsApp Stall Finder" "out/${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: out/${{ matrix.asset }}
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" "out/${{ matrix.asset }}" --clobber

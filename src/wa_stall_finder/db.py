@@ -9,7 +9,6 @@ import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from urllib.parse import quote
 
 
 def quote_ident(name: str) -> str:
@@ -24,7 +23,8 @@ def _harden(conn: sqlite3.Connection) -> sqlite3.Connection:
 
 def _connect_ro(path: Path) -> sqlite3.Connection:
     # immutable=1: SQLite takes no locks and creates no -journal/-wal/-shm files.
-    uri = f"file:{quote(str(path.resolve()))}?mode=ro&immutable=1"
+    # as_uri() gives a correctly escaped file: URI on Windows as well as POSIX.
+    uri = f"{path.resolve().as_uri()}?mode=ro&immutable=1"
     return _harden(sqlite3.connect(uri, uri=True))
 
 

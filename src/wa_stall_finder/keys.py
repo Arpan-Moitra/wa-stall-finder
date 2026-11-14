@@ -8,6 +8,7 @@ contains any part of it.
 from __future__ import annotations
 
 import getpass
+import os
 import re
 import stat
 import sys
@@ -43,7 +44,7 @@ def read_key(key_file: Path | None) -> str:
                 "the key file is not text. It should contain the 64-digit key shown by "
                 "WhatsApp, not an encrypted_backup.key binary file"
             ) from None
-        if stat.S_IMODE(mode) & 0o077:
+        if os.name != "nt" and stat.S_IMODE(mode) & 0o077:  # POSIX permission bits only
             print(
                 "warning: the key file is readable by other users; consider chmod 600",
                 file=sys.stderr,

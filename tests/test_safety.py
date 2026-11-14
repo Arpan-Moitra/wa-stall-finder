@@ -14,6 +14,8 @@ from pathlib import Path
 import pytest
 
 import synth
+
+posix_only = pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits")
 from wa_stall_finder import cli, db, keys
 from wa_stall_finder.decrypt import SQLITE_MAGIC, DecryptError, decrypt_backup
 
@@ -84,6 +86,7 @@ def test_no_plaintext_on_disk_by_default(encrypted, run, tmp_path, monkeypatch):
     assert "decrypted in memory" in r.stdout
 
 
+@posix_only
 def test_keep_decrypted_is_opt_in(encrypted, run, dirty):
     crypt, key_file, _ = encrypted
     r = run(crypt, "--key-file", str(key_file), "--keep-decrypted")
@@ -94,6 +97,7 @@ def test_keep_decrypted_is_opt_in(encrypted, run, dirty):
     assert "plain text" in r.stdout
 
 
+@posix_only
 def test_tempfile_fallback_is_private_and_removed(dirty):
     path, _ = dirty
     with db.open_bytes(path.read_bytes(), force_tempfile=True) as conn:
@@ -115,6 +119,7 @@ def test_tempfile_fallback_removed_on_error(dirty):
     assert not tmp.parent.exists()
 
 
+@posix_only
 def test_output_permissions(dirty, run):
     path, _ = dirty
     r = run(path)

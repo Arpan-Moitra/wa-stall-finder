@@ -1,0 +1,70 @@
+WHATSAPP TRANSFER STALL FINDER - HOW TO USE
+===========================================
+
+What this is for
+----------------
+You are moving WhatsApp from an Android phone to an iPhone and it stops at the
+same percentage every time with "An unknown error occurred". One broken message
+is usually the cause. This app finds it so you can delete it.
+
+It only reads your backup. It never changes it, and nothing is uploaded.
+
+
+STEP 1 - Make a backup on the Android phone
+-------------------------------------------
+1. Open WhatsApp. Tap the three dots > Settings > Chats > Chat backup.
+2. Tap "End-to-end encrypted backup" and turn it on.
+3. Choose "Use 64-digit encryption key" (NOT a password).
+4. WhatsApp shows a long key. Write it down exactly or take a photo of it.
+5. Go back and tap "Back up". Wait until it finishes.
+
+
+STEP 2 - Copy the backup file to your computer
+----------------------------------------------
+1. Connect the phone to the computer with a USB cable.
+   On the phone, pull down the notification bar, tap the USB notification and
+   choose "File transfer".
+   (On a Mac you need the free "Android File Transfer" app or similar.)
+2. On the phone's storage, open these folders in turn:
+     Android > media > com.whatsapp > WhatsApp > Databases
+3. Copy the file named   msgstore.db.crypt15   to your Desktop.
+
+
+STEP 3 - Open this app
+----------------------
+WINDOWS: double-click "WhatsApp Stall Finder.exe".
+  If a blue box says "Windows protected your PC", click "More info" and then
+  "Run anyway". This appears because the app is not from a big company.
+
+MAC: double-click "WhatsApp Stall Finder".
+  If the Mac says it cannot be opened: open System Settings > Privacy &
+  Security, scroll down, and click "Open Anyway" next to the app's name.
+
+
+STEP 4 - Find the problem
+-------------------------
+1. Click "Choose file" and pick the msgstore.db.crypt15 file on your Desktop.
+2. Type the 64-digit key from Step 1. Spaces do not matter.
+3. If you know the percentage where the transfer stops, type it in.
+4. Click "Find the problem messages" and wait.
+
+The app then tells you which messages to delete, in which chat, on what date,
+and which messages sit right before and after each one so you can find it.
+
+
+STEP 5 - Delete and try again
+-----------------------------
+1. On the Android phone, delete the messages in the order listed.
+2. Try the transfer to the iPhone again.
+3. If it stops at a DIFFERENT percentage, that is good news: one problem is
+   fixed and there is another. Repeat from Step 1 with a new backup.
+
+
+Keep it private
+---------------
+The backup file, the key, and the "WhatsApp transfer report" folder on your
+Desktop contain your messages. Do not send them to anyone, and delete the
+report folder and the copied backup file when you are finished.
+
+Deleting a message in WhatsApp cannot be undone.
+Not affiliated with WhatsApp, Meta or Apple. Provided as is, with no warranty.

@@ -9,11 +9,13 @@ import argparse
 import os
 import sqlite3
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from . import __version__
-from .checks import MEDIA_TYPES, VIEW_ONCE_TYPES, Options, run_all
+from .checks import MEDIA_TYPES, VIEW_ONCE_TYPES, CheckResult, Options, run_all
 from .db import Schema, open_bytes, open_plain
 from .decrypt import DecryptError, decrypt_backup, is_sqlite_file
 from .keys import KeyFormatError, read_key
@@ -85,36 +87,48 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def _run(args: argparse.Namespace) -> int:
-    src: Path = args.input
+class InputError(Exception):
+    """The input file cannot be analysed; the message is safe to show."""
+
+
+@dataclass
+class Outcome:
+    results: list[CheckResult]
+    meta: dict[str, Any]
+    warnings: list[str]
+    out: Path
+    text: str  # the terminal report
+
+
+def analyse(
+    src: Path, out: Path, opts: Options, get_key: Callable[[], str], *, keep_decrypted: bool = False
+) -> Outcome:
+    """Run every check on ``src`` and write the report into ``out``.
+
+    Shared by the command line and the desktop window. ``get_key`` is only
+    called when the input is an encrypted backup.
+    """
     if not src.is_file():
-        print(f"error: {src} is not a file", file=sys.stderr)
-        return 1
-    opts = Options(
-        context=args.context, redact=args.redact, full_integrity=args.full_integrity,
-        stall_pct=args.stall_pct, big_chat_messages=args.big_chat_messages,
-        big_chat_bytes=int(args.big_chat_gb * 1024**3), top=args.top, limit=args.limit,
-        media_types=args.media_types,
-    )
+        raise InputError(f"{src} is not a file")
     plain = is_sqlite_file(src)
     warnings: list[str] = []
     data: bytes | None = None
     if not plain:
-        key = read_key(args.key_file)
+        key = get_key()
         try:
             data, warnings = decrypt_backup(src, key)
         finally:
             del key
 
-    out: Path = args.out
     prepare_out_dir(out)
-    if args.keep_decrypted:
+    if keep_decrypted:
         if data is None:
             warnings.append("--keep-decrypted ignored: the input is already a decrypted database.")
         else:
             kept = out / KEPT_NAME
             fd = os.open(kept, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-            os.fchmod(fd, 0o600)
+            if hasattr(os, "fchmod"):
+                os.fchmod(fd, 0o600)
             with os.fdopen(fd, "wb") as f:
                 f.write(data)
             warnings.append(f"--keep-decrypted: your full message history is now in plain text at {kept}. Delete it when done.")
@@ -124,12 +138,10 @@ def _run(args: argparse.Namespace) -> int:
     with opener as conn:
         schema = Schema(conn)
         if "message" not in schema.tables:
-            print(
-                "error: no 'message' table found. This is not a current WhatsApp message "
-                "database (very old backups use a 'messages' table and are not supported).",
-                file=sys.stderr,
+            raise InputError(
+                "no 'message' table found. This is not a current WhatsApp message "
+                "database (very old backups use a 'messages' table and are not supported)."
             )
-            return 1
         results = run_all(conn, schema, opts)
 
     meta = {
@@ -146,7 +158,20 @@ def _run(args: argparse.Namespace) -> int:
         },
     }
     write_outputs(results, meta, warnings, out)
-    print(render_terminal(results, meta, warnings, out))
+    return Outcome(results, meta, warnings, out, render_terminal(results, meta, warnings, out))
+
+
+def _run(args: argparse.Namespace) -> int:
+    opts = Options(
+        context=args.context, redact=args.redact, full_integrity=args.full_integrity,
+        stall_pct=args.stall_pct, big_chat_messages=args.big_chat_messages,
+        big_chat_bytes=int(args.big_chat_gb * 1024**3), top=args.top, limit=args.limit,
+        media_types=args.media_types,
+    )
+    outcome = analyse(
+        args.input, args.out, opts, lambda: read_key(args.key_file), keep_decrypted=args.keep_decrypted
+    )
+    print(outcome.text)
     return 0
 
 
@@ -157,7 +182,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except KeyFormatError as e:
         print(f"usage error: {e}", file=sys.stderr)
         return 2
-    except DecryptError as e:
+    except (DecryptError, InputError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
     except (OSError, sqlite3.Error, MemoryError) as e:

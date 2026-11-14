@@ -16,9 +16,14 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+# Build-time only: used to produce the double-click apps. Not needed to run the tool.
+app = ["pyinstaller>=6.10"]
 
 [project.scripts]
 wa-stall-finder = "wa_stall_finder.cli:entry_point"
+
+[project.gui-scripts]
+wa-stall-finder-gui = "wa_stall_finder.gui:entry_point"
 
 [tool.setuptools.packages.find]
 where = ["src"]
